@@ -1,8 +1,11 @@
 document.addEventListener('DOMContentLoaded', () => {
     // Elementos de la UI
     const trackInput = document.getElementById('trackInput');
+    const trackVolume = document.getElementById('trackVolume');
+    const lyricsInput = document.getElementById('lyricsInput');
     const recordButton = document.getElementById('recordButton');
     const stopButton = document.getElementById('stopButton');
+    const lyricsDisplay = document.getElementById('lyricsDisplay');
     const recordingStatus = document.getElementById('recordingStatus');
     const playbackControls = document.getElementById('playbackControls');
     const audioPlayback = document.getElementById('audioPlayback');
@@ -19,6 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let backingTrackSource;
     let backingTrackBuffer;
     let vocalTrackBuffer;
+    let backingTrackGainNode;
 
     trackInput.addEventListener('change', async (event) => {
         const file = event.target.files[0];
@@ -34,6 +38,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert('No se pudo decodificar el archivo de audio. Por favor, intente con otro formato (MP3, WAV).');
                 return;
             }
+        }
+    });
+
+    trackVolume.addEventListener('input', () => {
+        if (backingTrackGainNode) {
+            backingTrackGainNode.gain.value = trackVolume.value;
         }
     });
 
@@ -55,18 +65,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 const arrayBuffer = await blob.arrayBuffer();
                 vocalTrackBuffer = await audioContext.decodeAudioData(arrayBuffer);
                 recordedChunks = [];
-                 // Detener el stream del micrófono para que el indicador del navegador desaparezca
                 stream.getTracks().forEach(track => track.stop());
             };
 
+            // Configurar pista de fondo con control de volumen
             backingTrackSource = audioContext.createBufferSource();
             backingTrackSource.buffer = backingTrackBuffer;
-            backingTrackSource.connect(audioContext.destination);
+            backingTrackGainNode = audioContext.createGain();
+            backingTrackGainNode.gain.value = trackVolume.value;
+            backingTrackSource.connect(backingTrackGainNode).connect(audioContext.destination);
             backingTrackSource.start();
 
+            // Mostrar letra
+            lyricsDisplay.textContent = lyricsInput.value;
+            lyricsDisplay.style.display = 'block';
+
+            // Empezar a grabar
             recordedChunks = [];
             mediaRecorder.start();
 
+            // Actualizar UI
             recordButton.disabled = true;
             recordButton.classList.add('recording');
             stopButton.disabled = false;
@@ -87,6 +105,10 @@ document.addEventListener('DOMContentLoaded', () => {
             backingTrackSource.stop();
         }
 
+        // Ocultar letra
+        lyricsDisplay.style.display = 'none';
+
+        // Actualizar UI
         recordButton.disabled = false;
         recordButton.classList.remove('recording');
         stopButton.disabled = true;
@@ -106,15 +128,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const duration = Math.max(backingTrackBuffer.duration, vocalTrackBuffer.duration);
             const offlineContext = new OfflineAudioContext(2, audioContext.sampleRate * duration, audioContext.sampleRate);
 
-            // Fuente de la pista de fondo
+            // Pista de fondo (con su volumen original, no el de monitoreo)
             const backingSource = offlineContext.createBufferSource();
             backingSource.buffer = backingTrackBuffer;
             backingSource.connect(offlineContext.destination);
 
-            // Fuente de la voz y cadena de efectos
+            // Voz y efectos
             const vocalSource = offlineContext.createBufferSource();
             vocalSource.buffer = vocalTrackBuffer;
-
             let lastNode = vocalSource;
 
             if (popFilterSwitch.checked) {
@@ -135,8 +156,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 lastNode.connect(convolver);
                 lastNode = convolver;
             }
-            
-            // El delay se maneja de forma diferente porque tiene un feedback loop
+
             if (echoSwitch.checked) {
                 const delay = offlineContext.createDelay(1.0);
                 delay.delayTime.value = 0.4;
@@ -148,7 +168,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 lastNode.connect(delay);
                 delay.connect(feedback).connect(delay);
                 delay.connect(wetLevel).connect(offlineContext.destination);
-                lastNode.connect(offlineContext.destination); // Dry signal
+                lastNode.connect(offlineContext.destination);
             } else {
                 lastNode.connect(offlineContext.destination);
             }
@@ -161,7 +181,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const url = URL.createObjectURL(wavBlob);
 
             const a = document.createElement('a');
-            a.style.display = 'none';
             a.href = url;
             a.download = 'cancion-terminada.wav';
             document.body.appendChild(a);
@@ -183,9 +202,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const sampleRate = context.sampleRate;
         const length = sampleRate * duration;
         const impulse = context.createBuffer(2, length, sampleRate);
-
-        for (let channel = 0; channel < 2; channel++) {
-            const channelData = impulse.getChannelData(channel);
+        for (let c = 0; c < 2; c++) {
+            const channelData = impulse.getChannelData(c);
             for (let i = 0; i < length; i++) {
                 channelData[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, 2.5);
             }
@@ -201,19 +219,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const channels = [];
         let offset = 0;
 
-        const setUint16 = (data) => {
-            view.setUint16(offset, data, true);
-            offset += 2;
-        };
-        const setUint32 = (data) => {
-            view.setUint32(offset, data, true);
-            offset += 4;
-        };
+        const setUint16 = (data) => { view.setUint16(offset, data, true); offset += 2; };
+        const setUint32 = (data) => { view.setUint32(offset, data, true); offset += 4; };
 
-        setUint32(0x46464952); // "RIFF"
+        setUint32(0x46464952); // RIFF
         setUint32(length - 8);
-        setUint32(0x45564157); // "WAVE"
-        setUint32(0x20746d66); // "fmt "
+        setUint32(0x45564157); // WAVE
+        setUint32(0x20746d66); // fmt
         setUint32(16);
         setUint16(1);
         setUint16(numOfChan);
@@ -221,7 +233,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setUint32(buffer.sampleRate * 2 * numOfChan);
         setUint16(numOfChan * 2);
         setUint16(16);
-        setUint32(0x61746164); // "data"
+        setUint32(0x61746164); // data
         setUint32(length - offset - 4);
 
         for (let i = 0; i < buffer.numberOfChannels; i++) {
@@ -238,8 +250,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             pos++;
         }
-
         return new Blob([view], { type: 'audio/wav' });
     }
 });
-

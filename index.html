@@ -13,62 +13,79 @@
             <div class="card-body p-5">
                 <h1 class="card-title text-center mb-4">Estudio de Grabación Virtual</h1>
                 
-                <!-- Paso 1: Cargar Pista -->
-                <div class="mb-4">
-                    <label for="trackInput" class="form-label"><strong>Paso 1:</strong> Sube tu pista de audio</label>
-                    <input class="form-control" type="file" id="trackInput" accept="audio/*">
+                <!-- Configuración de Pista -->
+                <div class="mb-4 p-3 border rounded">
+                    <h5>Configuración de la Pista</h5>
+                    <div class="mb-3">
+                        <label for="trackInput" class="form-label"><strong>Paso 1:</strong> Sube tu pista</label>
+                        <input class="form-control" type="file" id="trackInput" accept="audio/*">
+                    </div>
+                    <div class="mb-3">
+                        <label for="trackVolume" class="form-label">Volumen de monitoreo</label>
+                        <input type="range" class="form-range" id="trackVolume" min="0" max="1.5" step="0.05" value="0.7">
+                    </div>
+                    <div>
+                        <label for="pitchControl" class="form-label">Tono de la pista (semitonos)</label>
+                        <input type="range" class="form-range" id="pitchControl" min="-12" max="12" step="1" value="0">
+                        <div class="text-center"><strong id="pitchValue">0</strong> semitonos</div>
+                    </div>
                 </div>
 
-                <div class="mb-3">
-                    <label for="trackVolume" class="form-label">Volumen de la pista</label>
-                    <input type="range" class="form-range" id="trackVolume" min="0" max="1.5" step="0.05" value="0.7">
-                </div>
-
+                <!-- Letra -->
                 <div class="mb-4">
-                    <label for="lyricsInput" class="form-label"><strong>Paso 2:</strong> Pega la letra de la canción (opcional)</label>
+                    <label for="lyricsInput" class="form-label"><strong>Paso 2:</strong> Pega la letra (opcional)</label>
                     <textarea class="form-control" id="lyricsInput" rows="6" placeholder="Pega aquí la letra..."></textarea>
                 </div>
 
-                <!-- Controles de Grabación -->
+                <!-- Grabación -->
                 <div class="text-center my-4">
                     <h4 class="mb-3"><strong>Paso 3:</strong> ¡Graba!</h4>
                     <button id="recordButton" class="btn btn-danger btn-lg rounded-circle" style="width: 80px; height: 80px;" disabled>Grabar</button>
                     <button id="stopButton" class="btn btn-secondary btn-lg" disabled>Detener</button>
                 </div>
 
-                <!-- Display de Letra durante Grabación -->
-                <div id="lyricsDisplay" class="p-3 mb-3 bg-light border rounded" style="display: none; height: 200px; overflow-y: auto; white-space: pre-wrap; font-size: 1.1rem; line-height: 1.6;">
-                </div>
-
+                <div id="lyricsDisplay" class="p-3 mb-3 bg-light border rounded" style="display: none; height: 200px; overflow-y: auto; white-space: pre-wrap; font-size: 1.1rem; line-height: 1.6;"></div>
                 <div id="recordingStatus" class="text-center text-muted" style="display: none;">
                     <div class="spinner-grow spinner-grow-sm text-danger" role="status"></div>
                     Grabando...
                 </div>
 
-                <!-- Reproducción y Efectos -->
+                <!-- Previsualización y Efectos -->
                 <div id="playbackControls" class="mt-5" style="display: none;">
-                    <h4 class="text-center mb-3"><strong>Paso 4:</strong> Aplica efectos y descarga</h4>
-                    <div class="d-flex justify-content-center align-items-center my-4">
-                        <audio id="audioPlayback" controls class="w-100"></audio>
-                    </div>
+                    <h4 class="text-center mb-3"><strong>Paso 4:</strong> Previsualiza, aplica efectos y descarga</h4>
                     
+                    <!-- Controles de Previsualización -->
+                    <div class="card bg-light p-3 mb-4">
+                        <div class="d-flex justify-content-center align-items-center mb-3">
+                            <audio id="audioPlayback" controls class="w-100"></audio>
+                        </div>
+                        <div class="text-center">
+                            <label class="form-label">Escuchar:</label>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="previewMode" id="previewVocalOnly" value="vocal" checked>
+                                <label class="form-check-label" for="previewVocalOnly">Solo Voz</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="previewMode" id="previewWithTrack" value="mixed">
+                                <label class="form-check-label" for="previewWithTrack">Voz + Pista</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Controles de Efectos -->
                     <div class="row">
-                        <div class="col-md-4">
-                            <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" role="switch" id="reverbSwitch">
-                                <label class="form-check-label" for="reverbSwitch">Reverb</label>
-                            </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="reverbControl" class="form-label">Reverb</label>
+                            <input type="range" class="form-range" id="reverbControl" min="0" max="1" step="0.05" value="0">
                         </div>
-                        <div class="col-md-4">
-                            <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" role="switch" id="echoSwitch">
-                                <label class="form-check-label" for="echoSwitch">Echo (Delay)</label>
-                            </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="echoControl" class="form-label">Echo (Delay)</label>
+                            <input type="range" class="form-range" id="echoControl" min="0" max="1" step="0.05" value="0">
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-12 mb-3">
                             <div class="form-check form-switch">
                                 <input class="form-check-input" type="checkbox" role="switch" id="popFilterSwitch">
-                                <label class="form-check-label" for="popFilterSwitch">Filtro Voz Pop</label>
+                                <label class="form-check-label" for="popFilterSwitch">Filtro Voz Pop (EQ)</label>
                             </div>
                         </div>
                     </div>
